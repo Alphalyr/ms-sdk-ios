@@ -3,74 +3,87 @@ import UIKit
 
 public class AlphalyrMarketingStudioSdk {
     static private var aid: String = ""
-    private var gdprConsent: Bool = false
-    private var deviceType: String = "u"
-    private let deviceId: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    static private var gdprConsent: Bool = false
+    static private var deviceType: String = "u"
+    static private let deviceId: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
+    static private var customerId: String = ""
+    static private var universalLinkingUrl: URL?
 
     public init(aid: String) {
         AlphalyrMarketingStudioSdk.aid = aid
-        self.setDeviceType()
+        AlphalyrMarketingStudioSdk.setDeviceType()
     }
-    
-    static public func setReferer(_ application: UIApplication, _ launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) {
-        print("setReferer")
-        if let userUrl = launchOptions?[.url] {
-            // Access the NSUserActivity object
-            print("User Activity: \(userUrl)")
+
+    static public func onOpenUrl(_ url: URL) {
+        AlphalyrMarketingStudioSdk.universalLinkingUrl = url
+        AlphalyrMarketingStudioSdk.trackLandingHit()
+    }
+
+    static public func setGdprConsent(_ newValue: Bool) {
+        AlphalyrMarketingStudioSdk.gdprConsent = newValue
+    }
+
+    static public func setCustomerId(_ newValue: String) {
+        AlphalyrMarketingStudioSdk.customerId = newValue
+    }
+
+    static public func trackLandingHit() {
+        let queryParams = [AlphalyrMarketingStudioSdk.commonQueryParams(), AlphalyrMarketingStudioSdk.universalLinkingQueryParams()].compactMap { $0 }
+
+        AlphalyrMarketingStudioSdk.requestApi(path: "tag/store", queryParams: queryParams.joined(separator: "&"))
+    }
+
+    static private func universalLinkingQueryParams() -> String? {
+        guard let url = AlphalyrMarketingStudioSdk.universalLinkingUrl else { return nil }
+        let queryParams = AlphalyrMarketingStudioSdk.getUniversalLinkingQueryParams()
+        return "path=\(url.path)&utm_source=\(queryParams["utm_source"] ?? "")&utm_medium=\(queryParams["utm_medium"] ?? "")&utm_campaign=\(queryParams["utm_campaign"] ?? "")&referrer=\(queryParams["referrer"] ?? "")"
+    }
+
+    static private func getUniversalLinkingQueryParams() -> [String: String] {
+        guard let components = URLComponents(url: AlphalyrMarketingStudioSdk.universalLinkingUrl!, resolvingAgainstBaseURL: false) else { return [:] }
+        var queryParams: [String: String] = [:]
+
+        for queryItem in components.queryItems ?? [] {
+            queryParams[queryItem.name] = queryItem.value
         }
+
+        return queryParams
     }
-    
-    public func setGdprConsent(_ newValue: Bool) {
-        self.gdprConsent = newValue
+
+    static private func commonQueryParams() -> String {
+        return "aid=\(AlphalyrMarketingStudioSdk.aid)&device_type=\(AlphalyrMarketingStudioSdk.deviceType)&uuid=\(AlphalyrMarketingStudioSdk.deviceId)&gdpr_consent=\(AlphalyrMarketingStudioSdk.gdprConsent ? "1" : "0")&cid=\(AlphalyrMarketingStudioSdk.customerId)"
     }
-    
-    public func trackLandingHit(cid: String) {
-        let page = "app"
-    
-        let path="path"
-        let referrer = "self"
-        let utm_source = "source"
-        let utm_medium = "medium"
-        let utm_campaign = "campaign"
-        
-        let queryParams = "aid=\(AlphalyrMarketingStudioSdk.aid)&page=\(page)&device_type=\(self.deviceType)&uuid=\(self.deviceId)&path=\(path)&gdpr_consent=\(gdprConsent ? "1" : "0")&referrer=\(referrer)&utm_source=\(utm_source)&utm_medium=\(utm_medium)&utm_campaign=\(utm_campaign)&cid=\(cid)"
-        self.requestApi(path: "tag/store", queryParams: queryParams)
+
+    static public func trackTransaction(totalPrice: Float, totalPriceWithTax: Float, reference: String, new: Bool, currency: String, discountCode: String, discountAmount: Float, products: [(id: String, quantity: Int, price: Float)]) {
+        let transactionQueryParams = "totalPrice=\(totalPrice)&totalPriceWithTax=\(totalPriceWithTax)&reference=\(reference)&new=\(new ? "1" : "0")&currency=\(currency)&discountCode=\(discountCode)&discountAmount=\(discountAmount)&products=\(stringifyProducts(products))"
+
+        let queryParams = [AlphalyrMarketingStudioSdk.commonQueryParams(), transactionQueryParams].compactMap { $0 }
+        requestApi(path: "track/store", queryParams: queryParams.joined(separator: "&"))
     }
-    
-    private func setDeviceType(){
+
+    static private func stringifyProducts(_ products: [(id: String, quantity: Int, price: Float)]) -> String {
+        return products.map { "\($0.id):\($0.quantity):\($0.price)" }.joined(separator: ";")
+    }
+
+    static private func setDeviceType() {
         if UIDevice.current.userInterfaceIdiom == .phone {
-            self.deviceType = "m"
+            deviceType = "m"
         } else if UIDevice.current.userInterfaceIdiom == .pad {
-            self.deviceType = "t"
+            deviceType = "t"
         } else {
-            self.deviceType = "u"
+            deviceType = "u"
         }
     }
-    
-    private func requestApi(path: String, queryParams: String) {
-        let fullUrl = "https://webhook.site/d70665a4-e0cf-439a-9706-e4c2696e773f?\(queryParams)"
-        // let url = URL(string: "https://webhook.site/d70665a4-e0cf-439a-9706-e4c2696e773f?\(queryParams)")
-        let url = URL(string: fullUrl)
-        //let url = URL(string: "https://tck.elitrack.com/\(path)?\(queryParams)")
-        guard let requestUrl = url else { fatalError() }
-        // Prepare URL Request Object
-        var request = URLRequest(url: requestUrl)
+
+    static private func requestApi(path: String, queryParams: String) {
+        let fullUrl = "https://webhook.site/4bc1a57c-09ab-40fb-b3cd-76b12d7a2f71?\(queryParams)"
+        // let url = URL(string: "https://tck.elitrack.com/\(path)?\(queryParams)")
+        
+        guard let url = URL(string: fullUrl) else { fatalError() }
+        var request = URLRequest(url: url)
         request.httpMethod = "GET"
-         
-        // Perform HTTP Request
-        let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-                
-                // Check for Error
-                if let error = error {
-                    print("Error took place \(error)")
-                    return
-                }
-         
-                // Convert HTTP Response Data to a String
-                if let data = data, let dataString = String(data: data, encoding: .utf8) {
-                    print("Response data string:\n \(dataString)")
-                }
-        }
+
+        let task = URLSession.shared.dataTask(with: request)
         task.resume()
     }
 }
