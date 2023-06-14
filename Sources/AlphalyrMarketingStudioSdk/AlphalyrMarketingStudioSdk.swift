@@ -8,10 +8,12 @@ public class AlphalyrMarketingStudioSdk {
     static private let deviceId: String = UIDevice.current.identifierForVendor?.uuidString ?? "unknown"
     static private var customerId: String = ""
     static private var universalLinkingUrl: URL?
+    static private var excludedUniversalLinkingParams: [String] = []
 
-    public init(aid: String) {
+    public init(aid: String, excludedUniversalLinkingParams: [String]?) {
         AlphalyrMarketingStudioSdk.aid = aid
         AlphalyrMarketingStudioSdk.setDeviceType()
+        AlphalyrMarketingStudioSdk.excludedUniversalLinkingParams = excludedUniversalLinkingParams ?? []
     }
 
     static public func onOpenUrl(_ url: URL) {
@@ -35,16 +37,20 @@ public class AlphalyrMarketingStudioSdk {
 
     static private func universalLinkingQueryParams() -> String? {
         guard let url = AlphalyrMarketingStudioSdk.universalLinkingUrl else { return nil }
-        let queryParams = AlphalyrMarketingStudioSdk.getUniversalLinkingQueryParams()
-        return "path=\(url.path)&utm_source=\(queryParams["utm_source"] ?? "")&utm_medium=\(queryParams["utm_medium"] ?? "")&utm_campaign=\(queryParams["utm_campaign"] ?? "")&referrer=\(queryParams["referrer"] ?? "")"
+        var queryParams = AlphalyrMarketingStudioSdk.getUniversalLinkingQueryParams()
+        queryParams.append("path=\(url.path)")
+        
+        return queryParams.joined(separator: "&")
     }
 
-    static private func getUniversalLinkingQueryParams() -> [String: String] {
-        guard let components = URLComponents(url: AlphalyrMarketingStudioSdk.universalLinkingUrl!, resolvingAgainstBaseURL: false) else { return [:] }
-        var queryParams: [String: String] = [:]
+    static private func getUniversalLinkingQueryParams() -> [String] {
+        guard let components = URLComponents(url: AlphalyrMarketingStudioSdk.universalLinkingUrl!, resolvingAgainstBaseURL: false) else { return [] }
+        var queryParams: [String] = []
 
         for queryItem in components.queryItems ?? [] {
-            queryParams[queryItem.name] = queryItem.value
+            if (!AlphalyrMarketingStudioSdk.excludedUniversalLinkingParams.contains(queryItem.name)) {
+                queryParams.append("\(queryItem.name)=\(queryItem.value ?? "")")
+            }
         }
 
         return queryParams
@@ -77,7 +83,7 @@ public class AlphalyrMarketingStudioSdk {
 
     static private func requestApi(path: String, queryParams: String) {
         let fullUrl = "https://webhook.site/4bc1a57c-09ab-40fb-b3cd-76b12d7a2f71?\(queryParams)"
-        // let url = URL(string: "https://tck.elitrack.com/\(path)?\(queryParams)")
+        //let fullUrl = "https://tck.elitrack.com/\(path)?\(queryParams)"
         
         guard let url = URL(string: fullUrl) else { fatalError() }
         var request = URLRequest(url: url)
