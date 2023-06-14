@@ -50,4 +50,8 @@ AlphalyrMarketingStudioSdk.trackTransaction(
 )
 ```
 
+### Track a screen change
 
+```swift
+AlphalyrMarketingStudioSdk.trackScreenChange("/new_path")
+```

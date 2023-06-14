@@ -20,6 +20,11 @@ public class AlphalyrMarketingStudioSdk {
         AlphalyrMarketingStudioSdk.universalLinkingUrl = url
         AlphalyrMarketingStudioSdk.trackLandingHit()
     }
+    
+    static public func trackScreenChange(_ newScreen: String) {
+        let queryParams = [AlphalyrMarketingStudioSdk.commonQueryParams(), "referrer=self&path=\(newScreen)"].compactMap { $0 }
+        AlphalyrMarketingStudioSdk.requestApi(path: "tag/store", queryParams: queryParams.joined(separator: "&"))
+    }
 
     static public func setGdprConsent(_ newValue: Bool) {
         AlphalyrMarketingStudioSdk.gdprConsent = newValue
@@ -82,8 +87,8 @@ public class AlphalyrMarketingStudioSdk {
     }
 
     static private func requestApi(path: String, queryParams: String) {
-        let fullUrl = "https://webhook.site/4bc1a57c-09ab-40fb-b3cd-76b12d7a2f71?\(queryParams)"
-        //let fullUrl = "https://tck.elitrack.com/\(path)?\(queryParams)"
+        //let fullUrl = "https://webhook.site/4bc1a57c-09ab-40fb-b3cd-76b12d7a2f71?\(queryParams)&apiPath=\(path)"
+        let fullUrl = "https://tck.elitrack.com/\(path)?\(queryParams)"
         
         guard let url = URL(string: fullUrl) else { fatalError() }
         var request = URLRequest(url: url)
