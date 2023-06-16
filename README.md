@@ -2,6 +2,9 @@
 
 ## Getting started
 
+### Pre-requisites
+This SDK relies on Universal Links. You may refer to this [guide](https://abhimuralidharan.medium.com/universal-links-in-ios-79c4ee038272) in order to setup your mobile app with a domain name.
+
 ### Install the SDK
 
 ### Initialize the SDK in your app
@@ -31,7 +34,7 @@ struct myApp: App {
 ### Register your customer preferences
 
 ```swift
-AlphalyrMarketingStudioSdk.setCustomerId(_ customerId: String)
+AlphalyrMarketingStudioSdk.setCustomerId(_ customerId: String)  // usually SHA256 of email address
 AlphalyrMarketingStudioSdk.setGdprConsent(_ consent: Bool)
 ```
 
@@ -39,19 +42,13 @@ AlphalyrMarketingStudioSdk.setGdprConsent(_ consent: Bool)
 
 ```swift
 AlphalyrMarketingStudioSdk.trackTransaction(
-    totalPrice: Float, 
-    totalPriceWithTax: Float, 
-    reference: String, 
-    new: Bool, 
-    currency: String, 
-    discountCode: String?, 
-    discountAmount: Float?, 
+    totalPrice: Float,  // amount without taxes, without shipping costs 
+    totalPriceWithTax: Float, // amount with taxes included
+    reference: String, // order id
+    new: Bool, // true if new customer, false if returning customer
+    currency: String, // currency ISO-4217 code (i.e: EUR)
+    discountCode: String?, // coupon code
+    discountAmount: Float?,
     products: [(id: String, quantity: Int, price: Float)])
 )
-```
-
-### Track a screen change
-
-```swift
-AlphalyrMarketingStudioSdk.trackScreenChange("/new_path")
 ```
